@@ -1,0 +1,57 @@
+# Publishes the `cli/` package to https://www.npmjs.com when you push a semver tag.
+#
+# Setup (one-time):
+# 1. Create an npm "Granular Access Token" with permission to publish this package:
+#    https://www.npmjs.com/settings/<your-account>/tokens
+# 2. In the GitHub repo: Settings → Secrets and variables → Actions → New repository secret
+#    Name: NPM_TOKEN   Value: the token (starts with npm_)
+#
+# Release:
+# 1. Bump version in cli/package.json (e.g. 1.0.1)
+# 2. Commit and push
+# 3. Tag matching that version: git tag v1.0.1 && git push origin v1.0.1
+#    The tag must be v<version> with the same version string as in package.json.
+
+name: Publish CLI to npm
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: cli
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Match tag to package.json version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag refs/tags/v$TAG must match cli/package.json version ($VERSION). Bump version, commit, then tag v$VERSION."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

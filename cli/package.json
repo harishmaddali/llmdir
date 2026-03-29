@@ -4,6 +4,9 @@
   "type": "module",
   "description": "CLI to list LLM models, providers, and token costs from LLMDir",
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "bin": {
     "llmdir": "./dist/cli.js"
   },
